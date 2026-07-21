@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Priority Matrix - Eisenhower Board</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- Babel για JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Τα 4 τεταρτημόρια της μεθόδου Eisenhower
+    const QUADRANTS = [
+      { id: 'do_first', title: ' Do First', subtitle: 'Επείγον & Σημαντικό', border: 'border-rose-500/30', headerBg: 'bg-rose-500/10', text: 'text-rose-400' },
+      { id: 'schedule', title: '📅 Schedule', subtitle: 'Όχι Επείγον αλλά Σημαντικό', border: 'border-blue-500/30', headerBg: 'bg-blue-500/10', text: 'text-blue-400' },
+      { id: 'delegate', title: '👥 Delegate', subtitle: 'Επείγον αλλά Όχι Σημαντικό', border: 'border-amber-500/30', headerBg: 'bg-amber-500/10', text: 'text-amber-400' },
+      { id: 'dont_do', title: '🗑️ Delete', subtitle: 'Ούτε Επείγον ούτε Σημαντικό', border: 'border-slate-700', headerBg: 'bg-slate-800/50', text: 'text-slate-400' }
+    ];
+
+    function App() {
+      const [tasks, setTasks] = useState(() => {
+        const saved = localStorage.getItem('priority_matrix_tasks');
+        return saved ? JSON.parse(saved) : [
+          { id: '1', text: 'Διόρθωση κρίσιμου bug στο παραγωγικό σύστημα', quadrant: 'do_first', completed: false },
+          { id: '2', text: 'Σχεδιασμός νέων features για τον επόμενο μήνα', quadrant: 'schedule', completed: false },
+          { id: '3', text: 'Απάντηση σε emails ρουτίνας', quadrant: 'delegate', completed: false },
+          { id: '4', text: 'Σκρολάρισμα στα social media', quadrant: 'dont_do', completed: false }
+        ];
+      });
+
+      const [newTaskText, setNewTaskText] = useState('');
+      const [selectedQuadrant, setSelectedQuadrant] = useState('do_first');
+
+      // Αποθήκευση στο LocalStorage
+      useEffect(() => {
+        localStorage.setItem('priority_matrix_tasks', JSON.stringify(tasks));
+      }, [tasks]);
+
+      // Προσθήκη νέου task
+      const addTask = (e) => {
+        e.preventDefault();
+        if (!newTaskText.trim()) return;
+
+        const newTask = {
+          id: Date.now().toString(),
+          text: newTaskText.trim(),
+          quadrant: selectedQuadrant,
+          completed: false
+        };
+
+        setTasks([...tasks, newTask]);
+        setNewTaskText('');
+      };
+
+      // Μετακίνηση task σε άλλο τεταρτημόριο
+      const moveTask = (taskId, targetQuadrant) => {
+        setTasks(tasks.map(task => 
+          task.id === taskId ? { ...task, quadrant: targetQuadrant } : task
+        ));
+      };
+
+      // Toggle Complete
+      const toggleComplete = (taskId) => {
+        setTasks(tasks.map(task => 
+          task.id === taskId ? { ...task, completed: !task.completed } : task
+        ));
+      };
+
+      // Διαγραφή task
+      const deleteTask = (taskId) => {
+        setTasks(tasks.filter(task => task.id !== taskId));
+      };
+
+      // Υπολογισμός Productivity Score (%)
+      const completedCount = tasks.filter(t => t.completed).length;
+      const progressPercent = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
+
+      return (
+        <div className="min-h-screen pb-12 flex flex-col">
+          {/* Header */}
+          <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+            <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">🎯</span>
+                <div>
+                  <h1 className="text-xl font-bold tracking-wider bg-gradient-to-r from-amber-400 to-rose-500 bg-clip-text text-transparent">
+                    Priority Matrix
+                  </h1>
+                  <p className="text-xs text-slate-400">Eisenhower Decision Method</p>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="flex items-center gap-4 bg-slate-800/60 p-2 px-4 rounded-xl border border-slate-700/50 w-full sm:w-auto">
+                <div className="text-xs space-y-0.5">
+                  <div className="font-semibold text-slate-300">Productivity Score</div>
+                  <div className="text-slate-400">{completedCount} από {tasks.length} ολοκληρώθηκαν</div>
+                </div>
+                <div className="w-24 bg-slate-700 rounded-full h-2.5 overflow-hidden">
+                  <div 
+                    className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500" 
+                    style={{ width: `${progressPercent}%` }}
+                  ></div>
+                </div>
+                <span className="text-xs font-bold text-emerald-400">{progressPercent}%</span>
+              </div>
+            </div>
+          </header>
+
+          <main className="max-w-7xl mx-auto px-4 py-8 space-y-8 flex-1 w-full">
+            
+            {/* Input Form */}
+            <form onSubmit={addTask} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row items-center gap-3">
+              <input
+                type="text"
+                placeholder="Προσθήκη νέας εργασίας..."
+                value={newTaskText}
+                onChange={(e) => setNewTaskText(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500"
+              />
+              <select
+                value={selectedQuadrant}
+                onChange={(e) => setSelectedQuadrant(e.target.value)}
+                className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-xl px-3 py-2.5 focus:outline-none w-full sm:w-auto"
+              >
+                <option value="do_first">🔥 Do First</option>
+                <option value="schedule">📅 Schedule</option>
+                <option value="delegate">👥 Delegate</option>
+                <option value="dont_do">🗑️ Delete</option>
+              </select>
+              <button
+                type="submit"
+                className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm transition whitespace-nowrap"
+              >
+                Προσθήκη ➕
+              </button>
+            </form>
+
+            {/* 4 Quadrants Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {QUADRANTS.map(q => {
+                const qTasks = tasks.filter(t => t.quadrant === q.id);
+
+                return (
+                  <div 
+                    key={q.id} 
+                    className={`bg-slate-900/60 border ${q.border} rounded-2xl p-5 flex flex-col justify-between min-h-[280px] shadow-lg`}
+                  >
+                    <div>
+                      {/* Quadrant Header */}
+                      <div className={`p-3 rounded-xl ${q.headerBg} flex items-center justify-between mb-4 border border-slate-800`}>
+                        <div>
+                          <h2 className={`font-bold text-sm ${q.text}`}>{q.title}</h2>
+                          <p className="text-xs text-slate-400">{q.subtitle}</p>
+                        </div>
+                        <span className="text-xs bg-slate-950/60 text-slate-300 font-bold px-2.5 py-1 rounded-full border border-slate-800">
+                          {qTasks.length}
+                        </span>
+                      </div>
+
+                      {/* Tasks List */}
+                      <div className="space-y-2">
+                        {qTasks.length === 0 ? (
+                          <div className="text-center py-8 text-xs text-slate-600">
+                            Καμία εργασία σε αυτό το τεταρτημόριο
+                          </div>
+                        ) : (
+                          qTasks.map(task => (
+                            <div 
+                              key={task.id} 
+                              className={`p-3 rounded-xl border transition flex items-center justify-between gap-3 group ${
+                                task.completed 
+                                  ? 'bg-slate-950/40 border-slate-800/40 opacity-60' 
+                                  : 'bg-slate-800/50 border-slate-700/60 hover:border-slate-600'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 overflow-hidden">
+                                <input
+                                  type="checkbox"
+                                  checked={task.completed}
+                                  onChange={() => toggleComplete(task.id)}
+                                  className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                                />
+                                <span className={`text-xs text-slate-200 truncate ${task.completed ? 'line-through text-slate-500' : ''}`}>
+                                  {task.text}
+                                </span>
+                              </div>
+
+                              {/* Action Buttons */}
+                              <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition">
+                                <select
+                                  value={task.quadrant}
+                                  onChange={(e) => moveTask(task.id, e.target.value)}
+                                  className="bg-slate-900 border border-slate-700 text-[10px] text-slate-400 rounded p-1 focus:outline-none"
+                                  title="Μετακίνηση"
+                                >
+                                  <option value="do_first">🔥</option>
+                                  <option value="schedule">📅</option>
+                                  <option value="delegate">👥</option>
+                                  <option value="dont_do">🗑️</option>
+                                </select>
+                                <button
+                                  onClick={() => deleteTask(task.id)}
+                                  className="text-slate-500 hover:text-rose-400 p-1 text-xs transition"
+                                  title="Διαγραφή"
+                                >
+                                  ❌
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
